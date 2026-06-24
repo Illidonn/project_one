@@ -1,0 +1,70 @@
+import sqlite3
+
+
+from contextlib import closing
+from datetime import date, datetime
+
+
+from config import SCHEDULE_RESERVATIONS
+
+
+def init_db():
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        with con:
+            con.execute("""CREATE TABLE IF NOT EXISTS reservations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER,
+                        user_name TEXT,
+                        date TEXT,
+                        time TEXT,
+                        UNIQUE(date, time)
+                        );""")
+            con.execute("""CREATE TABLE IF NOT EXISTS schedule (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        day_week INTEGER,
+                        working_time TEXT,
+                        break_time TEXT,
+                        UNIQUE (day_week)
+                        );""")
+
+def add_booking(user_id, user_name, date, time):
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        with con:
+            sql_query = """INSERT INTO reservations (user_id, user_name, date, time)
+                            VALUES (?, ?, ?, ?) 
+                            """
+            try:
+                con.execute(sql_query, (user_id, user_name, date, time,))
+                return True
+            except sqlite3.IntegrityError:
+                return False
+            
+def get_free_slots(date):
+    print(type(date))
+    
+    day_week = datetime.fromisoformat(date).weekday()
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        row = con.execute("SELECT working_time, break_time FROM schedule WHERE day_week = ?",(day_week,)).fetchone()
+        if row is None:
+            return []          # выходной
+        working_time, break_time_str = row
+
+    start_string, finish_string = working_time.split("-") #получаем начало/конец рабочего дня в строках
+    start, finish = int(start_string.split(":")[0]), int(finish_string.split(":")[0]) #распарсиваем начало/конец в integer для прогона
+
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        booked_tuples = con.execute("""SELECT time
+        FROM reservations
+        WHERE date = ?;""", (date, )).fetchall()
+
+    booked_list = [item for t in booked_tuples for item in t]
+    booked_list_int = [int(str_time.split(":")[0]) for str_time in booked_list] #список числовых занятых часов
+   
+    free = set(range(start, finish)) - set(booked_list_int)
+    if break_time_str is not None:
+        free -= {int(break_time_str.split(":")[0])}
+    return sorted(free)
+
+if __name__ == "__main__":
+    init_db()
+    print(get_free_slots(str(date.today())))
