@@ -25,7 +25,7 @@ async def booking_handler(query: CallbackQuery):
 
 @router.message(Command("book"))
 async def command_book(message: Message, command: CommandObject):
-    date = str(command.args)
+    date = command.args
     if date is None:
         await message.answer("укажи дату в формате ГГГГ-ММ-ДД")
         return

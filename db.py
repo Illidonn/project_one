@@ -40,8 +40,7 @@ def add_booking(user_id, user_name, date, time):
                 return False
             
 def get_free_slots(date):
-    print(type(date))
-    
+
     day_week = datetime.fromisoformat(date).weekday()
     with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
         row = con.execute("SELECT working_time, break_time FROM schedule WHERE day_week = ?",(day_week,)).fetchone()
@@ -64,6 +63,17 @@ def get_free_slots(date):
     if break_time_str is not None:
         free -= {int(break_time_str.split(":")[0])}
     return sorted(free)
+
+def add_schedule(day_week, working_time, break_time):
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        with con:
+
+            con.execute("""INSERT INTO schedule (day_week, working_time, break_time)
+                           VALUES (?, ?, ?)
+                           ON CONFLICT(day_week) DO UPDATE SET 
+                           working_time = excluded.working_time,
+                           break_time = excluded.break_time 
+                           """, (day_week, working_time, break_time))
 
 if __name__ == "__main__":
     init_db()
