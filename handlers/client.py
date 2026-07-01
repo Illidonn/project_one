@@ -1,6 +1,8 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message 
 from aiogram.filters import Command, CommandObject
+from datetime import datetime
+
 
 from db import add_booking, get_free_slots
 from keyboards_texts import build_slots_keyboard
@@ -28,6 +30,11 @@ async def command_book(message: Message, command: CommandObject):
     date = command.args
     if date is None:
         await message.answer("укажи дату в формате ГГГГ-ММ-ДД")
+        return
+    try:
+        datetime.fromisoformat(date)
+    except ValueError:
+        await message.answer("Неверный ввод, нужна дата в формате ГГГГ-ММ-ДД.")
         return
     free_slots = get_free_slots(date)
     if not free_slots:
