@@ -8,6 +8,7 @@ from config import BOT_TOKEN
 from db import init_db
 from handlers.client import router as client_router
 from handlers.owner import router as owner_router
+from reminders import run_reminders
 
 
 dp = Dispatcher()
@@ -17,6 +18,7 @@ dp.include_router(owner_router)
 async def main() -> None:
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     init_db()
+    asyncio.create_task(run_reminders(bot))
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

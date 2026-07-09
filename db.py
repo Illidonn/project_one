@@ -2,7 +2,7 @@ import sqlite3
 
 
 from contextlib import closing
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 
 from config import SCHEDULE_RESERVATIONS
@@ -17,6 +17,8 @@ def init_db():
                         user_name TEXT,
                         date TEXT,
                         time TEXT,
+                        reminded_day INTEGER DEFAULT 0,
+                        reminded_hour INTEGER DEFAULT 0,
                         UNIQUE(date, time)
                         );""")
             con.execute("""CREATE TABLE IF NOT EXISTS schedule (
@@ -60,6 +62,7 @@ def get_free_slots(date):
     booked_list_int = [int(str_time.split(":")[0]) for str_time in booked_list] #список числовых занятых часов
    
     free = set(range(start, finish)) - set(booked_list_int)
+    # TODO: перерыв пока обязателен (см. /set_schedule). Ветка задел под опциональный обед.
     if break_time_str is not None:
         free -= {int(break_time_str.split(":")[0])}
     return sorted(free)
@@ -75,6 +78,33 @@ def add_schedule(day_week, working_time, break_time):
                            break_time = excluded.break_time 
                            """, (day_week, working_time, break_time))
 
-if __name__ == "__main__":
-    init_db()
-    print(get_free_slots(str(date.today())))
+def get_bookings_for_day_reminder():
+    tomorrow = str(date.today() + timedelta(days=1))
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        data = con.execute("""SELECT id, user_id, user_name, date, time FROM reservations 
+                            WHERE date = ? AND reminded_day = 0""", (tomorrow, )).fetchall()
+        return data
+    
+def mark_day_reminder_sent(booking_id):
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        with con:
+            con.execute("""UPDATE reservations
+                        SET reminded_day = 1
+                        WHERE id = ?""", (booking_id, ))
+
+def get_bookings_for_hour_reminder():
+    moment = datetime.now()
+    now = moment.strftime("%Y-%m-%d %H:%M")
+    deadline = (moment + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        data = con.execute("""SELECT id, user_id, user_name, date, time FROM reservations 
+                            WHERE date || ' ' || time BETWEEN ? AND ? AND reminded_hour = 0""", (now, deadline)).fetchall()
+        return data
+
+def mark_hour_reminder_sent(booking_id):
+    with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
+        with con:
+            con.execute("""UPDATE reservations
+                        SET reminded_hour = 1
+                        WHERE id = ?""", (booking_id, ))
+    
