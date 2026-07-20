@@ -1,7 +1,8 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+import html
 
 def successful_booked_text(user_name):
-    return f"{user_name}, запись подтверждена!"
+    return f"{html.escape(user_name)}, запись подтверждена!"
 
 unsuccessful_booked_text = "К сожалению, эта запись уже занята."
 
@@ -14,7 +15,7 @@ def build_slots_keyboard(free_slots_list, date):
     return builder.as_markup()
 
 def day_reminder_text(user_name, booking_time):
-    return f"{user_name}, вы записаны на завтра. Время: {booking_time}"
+    return f"{html.escape(user_name)}, Вы записаны на завтра. Время: {html.escape(booking_time)}"
 
 def hour_reminder_text(user_name, booking_time):
-    return f"{user_name}, скоро Ваша запись. Время: {booking_time}"
+    return f"{html.escape(user_name)}, скоро Ваша запись. Время: {html.escape(booking_time)}"
