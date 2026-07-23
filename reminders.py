@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from db import get_bookings_for_day_reminder, get_bookings_for_hour_reminder, mark_day_reminder_sent, mark_hour_reminder_sent
 from keyboards_texts import day_reminder_text, hour_reminder_text

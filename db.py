@@ -41,9 +41,19 @@ def add_booking(user_id, user_name, date, time):
             except sqlite3.IntegrityError:
                 return False
             
-def get_free_slots(date):
+def get_free_dates():
+    start_date = date.today()
+    check_dates = [(start_date + timedelta(days=i)).isoformat() for i in range(12)]
 
-    day_week = datetime.fromisoformat(date).weekday()
+    free_dates_list = []
+    for day in check_dates:
+        slots = get_free_slots(day)
+        if slots:
+            free_dates_list.append(day)
+    return free_dates_list
+
+def get_free_slots(iso_date):
+    day_week = datetime.fromisoformat(iso_date).weekday()
     with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
         row = con.execute("SELECT working_time, break_time FROM schedule WHERE day_week = ?",(day_week,)).fetchone()
         if row is None:
@@ -56,7 +66,7 @@ def get_free_slots(date):
     with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
         booked_tuples = con.execute("""SELECT time
         FROM reservations
-        WHERE date = ?;""", (date, )).fetchall()
+        WHERE date = ?;""", (iso_date, )).fetchall()
 
     booked_list = [item for t in booked_tuples for item in t]
     booked_list_int = [int(str_time.split(":")[0]) for str_time in booked_list] #список числовых занятых часов
@@ -65,7 +75,10 @@ def get_free_slots(date):
     # TODO: перерыв пока обязателен (см. /set_schedule). Ветка задел под опциональный обед.
     if break_time_str is not None:
         free -= {int(break_time_str.split(":")[0])}
-    return sorted(free)
+    if iso_date == date.today().isoformat():
+        now_hour = datetime.now().hour
+        free -= set(range(0, now_hour + 1))
+    return [f"{h:02d}:00" for h in sorted(free)]
 
 def add_schedule(day_week, working_time, break_time):
     with closing(sqlite3.connect(SCHEDULE_RESERVATIONS)) as con:
